@@ -1,0 +1,245 @@
+---
+title: "Untitled"
+author: ""
+date: ""
+output: 
+  pdf_document:
+    fig_height: 3
+    fig_width: 5
+  html_document:
+    fig_height: 3
+    fig_width: 5
+  word_document:
+    fig_height: 3
+    fig_width: 5
+---
+
+```{r}
+
+library("tidyquant")
+library("lubridate")
+library("tidyverse")
+AAPL <- tq_get("AAPL", get = "stock.prices", from = "2015-01-01")
+```
+
+#### 1. a.
+
+```{r}
+AAPL_A_1 <- AAPL |> 
+  mutate(date = as.Date(date)) |> 
+  filter(date >= today() - dweeks(12))
+
+AAPL_A_1 <- AAPL_A_1 |>
+  mutate(pos_or_neg = ifelse(open > close, "neg", "pos"))
+
+ggplot(data =AAPL_A_1,aes=date) + 
+  geom_segment(aes(y = low, x = date, yend = high,
+                   xend = date), color = "black") +
+  geom_rect(aes(
+    xmin = date - 0.4, xmax = date + 0.4,
+    ymin = pmin(open, close), ymax = pmax(open, close), 
+    fill = pos_or_neg)) +
+  scale_fill_manual(values = c("neg" = "firebrick",
+                               "pos" = "forestgreen")) +
+  theme_minimal() + 
+  guides(x =  guide_axis(angle = 45)) +
+  theme(legend.position="none", 
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank(),
+        plot.title = element_text(size=12.25)) +
+  scale_y_continuous(labels=scales::dollar_format()) +
+  scale_x_date(date_breaks = "1 weeks", date_labels = "%b %d") +
+  labs(title = "Daily movement in AAPL share price over the past twelve weeks")
+```
+
+#### 1. b.
+
+```{r}
+AAPL_by_week <- AAPL |>
+  mutate(week = week(date), year = year(date)) |>
+  filter(date >= today() - dweeks(52)) |>
+  group_by(year, week) |> 
+  summarise(date = min(date), 
+            open = first(open), 
+            close = last(close), 
+            high = max(high), 
+            low = min(low)) |>
+  ungroup()
+
+
+AAPL_by_week <- AAPL_by_week |> mutate(pos_or_neg = ifelse(open > close , "neg", "pos"))
+
+AAPL_by_week
+  
+```
+
+#### 1. c.
+
+```{r}
+ggplot(data =AAPL_by_week,aes=date) + 
+  geom_segment(aes(y = low, x = date, yend = high,
+                   xend = date), color = "black") +
+  geom_rect(aes(
+    xmin = date - 1.5, xmax = date + 1.5,
+    ymin = pmin(open, close), ymax = pmax(open, close), 
+    fill = pos_or_neg)) +
+  scale_fill_manual(values = c("neg" = "firebrick",
+                               "pos" = "forestgreen")) +
+  theme_minimal() + 
+  guides(x =  guide_axis(angle = 45)) +
+  theme(legend.position="none", 
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank(),
+        plot.title = element_text(size=12.25)) +
+  scale_y_continuous(labels=scales::dollar_format()) +
+  scale_x_date(date_breaks = "1 months", date_labels = "%b") +
+  labs(title = "Weekly movement in AAPL share price (Year to Date)")
+```
+
+#### 1. d.
+
+```{r}
+AAPL_quater <- AAPL |>
+  mutate(quarter = quarter(date), year = year(date))|>
+  group_by(year, quarter) |> 
+  summarise(date = min(date), 
+            open = first(open), 
+            close = last(close), 
+            high = max(high), 
+            low = min(low)) |>
+  ungroup()
+
+AAPL_quater <- AAPL_quater |> 
+  mutate(pos_or_neg = ifelse(open > close , "neg", "pos"))
+
+ggplot(data =AAPL_quater,aes=date) + 
+  geom_segment(aes(y = low, x = date, yend = high,
+                   xend = date), color = "black") +
+  geom_rect(aes(
+    xmin = date - 20, xmax = date + 20,
+    ymin = pmin(open, close), ymax = pmax(open, close), 
+    fill = pos_or_neg)) +
+  scale_fill_manual(values = c("neg" = "firebrick",
+                               "pos" = "forestgreen")) +
+  theme_minimal() + 
+  guides(x =  guide_axis(angle = 45)) +
+  theme(legend.position="none", 
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank(),
+        plot.title = element_text(size=12.25)) +
+  scale_y_continuous(labels=scales::dollar_format()) +
+  scale_x_date(date_breaks = "1 years", date_labels = "%b %Y") +
+  labs(title = "Quarterly movements in AAPL share price since 2015")
+```
+
+#### 1. e.
+
+```{r}
+(SP500 <- tq_index("SP500"))
+(SP500_prices <- SP500 |> tq_get(get = "stock.prices", from = "2010-01-01"))
+
+if ( fs::file_exists("SP500.rds") ) {
+  SP500 <- read_rds("SP500.rds")
+  SP500_prices <- read_rds("SP500_prices.rds")
+} else {
+  SP500 <- tq_index("SP500")
+  write_rds(SP500, "SP500.rds")
+  SP500_prices <- SP500 |>
+    tq_get(get = "stock.prices", from = "2010-01-01")
+  write_rds(SP500_prices, "SP500_prices.rds")
+}
+
+SP500
+
+SP500_prices
+```
+
+#### 1. f.
+
+```{r}
+first_trading_days <- SP500_prices |>
+  group_by(company) |>
+  summarise(first_trading_day = min(date), .groups = "drop")
+
+proportion <- first_trading_days |>
+  filter(first_trading_day > mdy("Jan 4, 2010")) |>
+  nrow() / nrow(first_trading_days)
+
+proportion
+```
+
+#### 1. g.
+
+```{r}
+trading_count <- SP500_prices|>
+  count(company, name = "trading_days")
+
+trading_count
+```
+
+#### 1. h.
+
+```{r}
+five_years_ago <- today() - years(5)
+
+five_years_ago_trading_date <- SP500_prices |>
+  distinct(date) |>
+  mutate(days_away_from_five_years_ago = 
+           abs(as.Date(date) - five_years_ago)) |>
+  arrange(days_away_from_five_years_ago) |>
+  slice_head(n = 1) |>
+  pull(date)
+
+companies_five_yr <- SP500_prices |> group_by(symbol) |>
+  summarise(first_trading_day = min(date, na.rm = TRUE)) |>
+  filter(first_trading_day <= five_years_ago_trading_date) |> pull(symbol)
+
+sandp_last_five <- SP500_prices |> filter(symbol %in% companies_five_yr)
+
+glimpse(sandp_last_five)
+```
+
+#### 1. i.
+
+```{r}
+sandp_last_five <- sandp_last_five |> mutate(
+  initial_closing = first(close),
+  net_return = (close - initial_closing)/initial_closing * 100) |>
+  ungroup()
+
+ggplot(sandp_last_five,
+       aes(x = date, y = net_return, color = company)) + 
+  geom_line(size = .5, show.legend = FALSE, alpha = .5) +
+  labs(
+    title = "Line chart of S&P 500 net returns over last 5 years",
+    x = "Date",
+    y = "Net return",
+  ) +
+  scale_y_continuous(labels=scales::dollar_format()) +
+  theme_minimal() +
+  theme(legend.position = "none", 
+        plot.title = element_text(size=12.25))
+```
+
+#### 1. j.
+
+```{r}
+returns <- sandp_last_five |>
+  group_by(symbol) |>
+  summarise(
+    start = first(close[date == five_years_ago_trading_date]),
+    end = first(close[date == max(date)]),
+    net = (end - start) / start
+  ) |>
+  ungroup()
+
+best_returns <- returns |>
+  summarise(
+    symbol = symbol,
+    net = net
+  ) |>
+  arrange(desc(net)) 
+
+best_returns
+```
+
