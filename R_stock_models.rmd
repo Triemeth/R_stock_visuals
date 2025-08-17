@@ -1,18 +1,23 @@
 ---
-title: "Untitled"
-author: ""
-date: ""
-output: 
-  pdf_document:
-    fig_height: 3
-    fig_width: 5
-  html_document:
-    fig_height: 3
-    fig_width: 5
-  word_document:
-    fig_height: 3
-    fig_width: 5
+format:
+  pdf:
+    fig-pos: 'h!'
+execute:
+  echo: true
+  cache: false
+  error: true
+  fig-height: 2.75
+knitr:
+  opts_chunk: 
+    fig-format: pdf
+    collapse: true
+    comment: "#"
 ---
+
+## Ethan Triem
+
+STA 4373/5373 - Computational Methods in Statistics
+
 
 ```{r}
 
